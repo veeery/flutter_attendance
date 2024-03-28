@@ -6,7 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MapController extends GetxController {
   Completer<GoogleMapController> googleMapController = Completer();
-  // List<Placemark> placeAddress = [];
+
   Position? defaultPosition;
   List<Position> nearbyPositionList = [];
   dynamic markers;
@@ -14,9 +14,12 @@ class MapController extends GetxController {
   bool statusPermission = false;
   bool isLoading = false;
 
+  int radius = 0;
+
   @override
   void onInit() async {
     await getCurrentLocation();
+    radius = int.parse(Get.arguments);
     super.onInit();
   }
 
@@ -50,15 +53,9 @@ class MapController extends GetxController {
     update();
   }
 
-  Future<void> getNearbyArea({required String areaName}) async {
-    triggeredLoading();
-
-    // listMap = await api.getNearestArea(
-    //     longitude: defaultPosition!.longitude, latitude: defaultPosition!.latitude, areaName: areaName);
-    //
-    // convertMarkers();
-
-    triggeredLoading();
+  void updateMarkers({required Marker marker}) {
+    markers.add(marker);
+    print("markers: $markers");
     update();
   }
 
@@ -66,5 +63,4 @@ class MapController extends GetxController {
     isLoading = !isLoading;
     update();
   }
-
 }

@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      initialRoute: AppRoutes.map,
+      initialRoute: AppRoutes.mapSetting,
       getPages: AppPages.pages,
     );
   }

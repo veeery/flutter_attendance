@@ -13,30 +13,81 @@ class MapScreen extends StatelessWidget {
     AppSizeUtil.init(context: context);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Container(
+        child: SizedBox(
           width: 100.w,
           height: 100.h,
           child: Stack(
             children: [
               GetBuilder<MapController>(
                 builder: (controller) {
+                  // if (controller.markers == null) return Text('Set Up Location');
                   if (!controller.statusPermission) return Text('Permission Denied');
-                  return GoogleMap(
-                    markers: controller.markers,
-                    mapType: MapType.normal,
-                    myLocationEnabled: true,
-                    initialCameraPosition: CameraPosition(
-                        target: LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude),
-                        zoom: 14.476),
-                    onMapCreated: (GoogleMapController googleController) {
-                      controller.googleMapController.complete(googleController);
-                    },
+                  // return mapView();
+                  return SizedBox(
+                    width: 100.w,
+                    height: 100.h,
+                    child: Stack(
+                      children: [
+                        GoogleMap(
+                          markers: controller.markers,
+                          mapType: MapType.normal,
+                          myLocationEnabled: true,
+                          initialCameraPosition: CameraPosition(
+                              target:
+                                  LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude),
+                              zoom: 14.476),
+                          onMapCreated: (GoogleMapController googleController) {
+                            controller.googleMapController.complete(googleController);
+                          },
+                          circles: Set.from([
+                            if (controller.markers.isNotEmpty)
+                              Circle(
+                                circleId: CircleId('myCircle'),
+                                center: controller.markers.first.position,
+                                // Mengikuti posisi marker pertama
+                                radius: 1000,
+                                // radius dalam meter
+                                fillColor: Colors.red.withOpacity(0.5),
+                                strokeColor: Colors.red,
+                                strokeWidth: 1,
+                              ),
+                          ]),
+                          onTap: (LatLng location) {
+                            controller.markers.clear();
+                            Marker marker = Marker(
+                              markerId: MarkerId(location.toString()),
+                              position: location,
+                            );
+                            controller.updateMarkers(marker: marker);
+                          },
+                        ),
+                        Positioned(
+                          bottom: 2.5.h,
+                          left: 5.w,
+                          child: Container(
+                            width: 80.w,
+                            height: 5.h,
+                            padding: EdgeInsets.symmetric(horizontal: 2.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white70,
+                              borderRadius: BorderRadius.circular(1.h),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Set Up this Location?'),
+                                TextButton(onPressed: () {}, child: Text('OK')),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
-              )
-              // GoogleMap(initialCameraPosition: CameraPosition(target: LatLng(0, 0), zoom: 14.476)),
+              ),
             ],
           ),
         ),
@@ -44,47 +95,33 @@ class MapScreen extends StatelessWidget {
     );
   }
 
-// Widget MapView() {
-//   return SizedBox(
-//     width: 100.w,
-//     height: 100.h,
-//     child: Stack(
-//       children: [
-//         GoogleMap(
-//           markers: controller.markers,
-//           mapType: MapType.normal,
-//           myLocationEnabled: true,
-//           initialCameraPosition: CameraPosition(
-//               target: LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude),
-//               zoom: 14.476),
-//           onMapCreated: (GoogleMapController googleController) {
-//             controller.googleMapController.complete(googleController);
-//           },
-//         ),
-//         Positioned(
-//           top: 1.4.h,
-//           left: 2.w,
-//           child: AppButton(
-//             title: "Hospital",
-//             onTap: () async => await controller.getNearbyArea(areaName: "hospital"),
-//           ),
-//         ),
-//         Positioned(
-//           top: 1.4.h,
-//           left: 25.w,
-//           child: AppButton(
-//             title: "Restaurant",
-//             onTap: () async => await controller.getNearbyArea(areaName: "restaurant"),
-//           ),
-//         ),
-//         Positioned(
-//           bottom: 2.1.h,
-//           left: 2.w,
-//           child: MapAddress(),
-//         ),
-//         controller.isLoading ? const AppLoading() : Container(),
-//       ],
-//     ),
-//   );
-// }
+  Widget mapView() {
+    return SizedBox(
+      width: 100.w,
+      height: 100.h,
+      child: Stack(
+        children: [
+          GoogleMap(
+            markers: controller.markers,
+            mapType: MapType.normal,
+            myLocationEnabled: true,
+            initialCameraPosition: CameraPosition(
+                target: LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude),
+                zoom: 14.476),
+            onMapCreated: (GoogleMapController googleController) {
+              controller.googleMapController.complete(googleController);
+            },
+            onTap: (LatLng location) {
+              controller.markers.clear();
+              Marker marker = Marker(
+                markerId: MarkerId(location.toString()),
+                position: location,
+              );
+              controller.updateMarkers(marker: marker);
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
