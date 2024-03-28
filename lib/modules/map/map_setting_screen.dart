@@ -54,24 +54,6 @@ class MapSettingScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (int.parse(controller.radiusText.text) == 0) {
-                              Get.snackbar('Error', 'Please set up location first', backgroundColor: Colors.red[200]);
-                            } else {
-                              if (controller.statusPermission) {
-                                await controller.getCurrentLocation();
-                                // controller.startLocationUpdates();
-                                Get.toNamed(AppRoutes.map);
-                              }
-                              ;
-                            }
-                          },
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
-                          ),
-                          child: SizedBox(width: 100.w, child: Text('Set Up Location')),
-                        ),
                         TextField(
                           controller: controller.radiusText,
                           keyboardType: TextInputType.number,
@@ -82,20 +64,44 @@ class MapSettingScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(2.w),
                               borderSide: BorderSide(color: Colors.red, width: 2.w),
                             ),
-                            suffixIcon: IconButton(
-                              onPressed: () {
-                                if (int.parse(controller.radiusText.text) == 0) {
-                                  Get.snackbar('Error', 'Please set up location first',
-                                      backgroundColor: Colors.red[200]);
-                                } else {
-                                  Get.snackbar('Success', 'Location has been set up',
-                                      backgroundColor: Colors.green[200]);
-                                }
-                              },
-                              icon: Text('OK'),
-                            ),
+                            // suffixIcon: IconButton(
+                            //   onPressed: () {
+                            //     if (int.parse(controller.radiusText.text) == 0) {
+                            //       Get.snackbar('Error', 'Please set up location first',
+                            //           backgroundColor: Colors.red[200]);
+                            //     } else {
+                            //       Get.snackbar('Success', 'Location has been set up',
+                            //           backgroundColor: Colors.green[200]);
+                            //     }
+                            //   },
+                            //   icon: Text('OK'),
+                            // ),
                           ),
                         ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            if (controller.radiusText.text.isEmpty) {
+                              if (controller.radiusText.text == '0') {
+                                Get.snackbar('Error', 'Cant put Radius 0', backgroundColor: Colors.red[200]);
+                              } else {
+                                Get.snackbar('Error', 'Please set the Radius first', backgroundColor: Colors.red[200]);
+                              }
+                            } else {
+                              if (controller.statusPermission) {
+                                await controller.getCurrentLocation();
+                                // controller.startLocationUpdates();
+                                Get.offNamed(AppRoutes.map);
+                              }
+                            }
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
+                          ),
+                          child: SizedBox(width: 100.w, child: Text('Set Up Location')),
+                        ),
+                        SizedBox(height: 20.h),
+                        Text('Noted: Aplikasi ini bisa Absent Manual dan juga Absent Otomatis dengan custom Radius'),
+                        Text('')
                       ],
                     ),
                   );
