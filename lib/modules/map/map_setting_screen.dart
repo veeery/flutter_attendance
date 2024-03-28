@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_attendance/constants/app_size_utils.dart';
+import 'package:flutter_attendance/controllers/map_controller.dart';
 import 'package:get/get.dart';
 
 import '../../constants/app_routes.dart';
-import '../../controllers/map_settings_controller.dart';
 
 class MapSettingScreen extends StatelessWidget {
-  final MapSettingController controller = Get.put(MapSettingController());
+  final MapController controller = Get.put(MapController());
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +20,32 @@ class MapSettingScreen extends StatelessWidget {
           width: 100.w,
           height: 100.h,
           child: Stack(
+            alignment: Alignment.center,
             children: [
-              GetBuilder<MapSettingController>(
-                builder: (controller) {
+              GetBuilder<MapController>(
+                builder: (_) {
+                  if (!controller.statusPermission) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on),
+                        const Text('Please enable location service'),
+                        TextButton(
+                            onPressed: () async => await controller.getPermission(), child: Text('Go to Setting'))
+                      ],
+                    );
+                  }
+                  if (controller.isLoading) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(),
+                        SizedBox(height: 2.h),
+                        const Text('Loading...'),
+                      ],
+                    );
+                  }
                   return Container(
                     width: 100.w,
                     height: 100.h,
@@ -32,11 +55,16 @@ class MapSettingScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (int.parse(controller.radiusText.text) == 0) {
                               Get.snackbar('Error', 'Please set up location first', backgroundColor: Colors.red[200]);
                             } else {
-                              Get.toNamed(AppRoutes.map, arguments: controller.radiusText.text);
+                              if (controller.statusPermission) {
+                                await controller.getCurrentLocation();
+                                // controller.startLocationUpdates();
+                                Get.toNamed(AppRoutes.map);
+                              }
+                              ;
                             }
                           },
                           style: ButtonStyle(
@@ -57,9 +85,11 @@ class MapSettingScreen extends StatelessWidget {
                             suffixIcon: IconButton(
                               onPressed: () {
                                 if (int.parse(controller.radiusText.text) == 0) {
-                                  Get.snackbar('Error', 'Please set up location first', backgroundColor: Colors.red[200]);
+                                  Get.snackbar('Error', 'Please set up location first',
+                                      backgroundColor: Colors.red[200]);
                                 } else {
-                                  Get.snackbar('Success', 'Location has been set up', backgroundColor: Colors.green[200]);
+                                  Get.snackbar('Success', 'Location has been set up',
+                                      backgroundColor: Colors.green[200]);
                                 }
                               },
                               icon: Text('OK'),

@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_attendance/controllers/map_controller.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../constants/app_size_utils.dart';
 
 class MapScreen extends StatelessWidget {
-  final MapController controller = Get.put(MapController());
+  final MapController controller = Get.find<MapController>();
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -19,70 +24,19 @@ class MapScreen extends StatelessWidget {
           width: 100.w,
           height: 100.h,
           child: Stack(
+            alignment: Alignment.center,
             children: [
               GetBuilder<MapController>(
-                builder: (controller) {
-                  // if (controller.markers == null) return Text('Set Up Location');
-                  if (!controller.statusPermission) return Text('Permission Denied');
-                  // return mapView();
+                builder: (_) {
                   return SizedBox(
                     width: 100.w,
                     height: 100.h,
                     child: Stack(
                       children: [
-                        GoogleMap(
-                          markers: controller.markers,
-                          mapType: MapType.normal,
-                          myLocationEnabled: true,
-                          initialCameraPosition: CameraPosition(
-                              target:
-                                  LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude),
-                              zoom: 14.476),
-                          onMapCreated: (GoogleMapController googleController) {
-                            controller.googleMapController.complete(googleController);
-                          },
-                          circles: Set.from([
-                            if (controller.markers.isNotEmpty)
-                              Circle(
-                                circleId: CircleId('myCircle'),
-                                center: controller.markers.first.position,
-                                // Mengikuti posisi marker pertama
-                                radius: 1000,
-                                // radius dalam meter
-                                fillColor: Colors.red.withOpacity(0.5),
-                                strokeColor: Colors.red,
-                                strokeWidth: 1,
-                              ),
-                          ]),
-                          onTap: (LatLng location) {
-                            controller.markers.clear();
-                            Marker marker = Marker(
-                              markerId: MarkerId(location.toString()),
-                              position: location,
-                            );
-                            controller.updateMarkers(marker: marker);
-                          },
-                        ),
-                        Positioned(
-                          bottom: 2.5.h,
-                          left: 5.w,
-                          child: Container(
-                            width: 80.w,
-                            height: 5.h,
-                            padding: EdgeInsets.symmetric(horizontal: 2.w),
-                            decoration: BoxDecoration(
-                              color: Colors.white70,
-                              borderRadius: BorderRadius.circular(1.h),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Set Up this Location?'),
-                                TextButton(onPressed: () {}, child: Text('OK')),
-                              ],
-                            ),
-                          ),
-                        ),
+                        buildMapView(),
+                        if (controller.markLocation == null) buildSetUpLocation(),
+                        if (controller.markLocation != null) buildAbsentByRadius(),
+                        if (controller.markLocation != null) buildStatusAbsent(),
                       ],
                     ),
                   );
@@ -95,32 +49,150 @@ class MapScreen extends StatelessWidget {
     );
   }
 
-  Widget mapView() {
-    return SizedBox(
-      width: 100.w,
-      height: 100.h,
-      child: Stack(
-        children: [
-          GoogleMap(
-            markers: controller.markers,
-            mapType: MapType.normal,
-            myLocationEnabled: true,
-            initialCameraPosition: CameraPosition(
-                target: LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude),
-                zoom: 14.476),
-            onMapCreated: (GoogleMapController googleController) {
-              controller.googleMapController.complete(googleController);
-            },
-            onTap: (LatLng location) {
-              controller.markers.clear();
-              Marker marker = Marker(
-                markerId: MarkerId(location.toString()),
-                position: location,
-              );
-              controller.updateMarkers(marker: marker);
-            },
+  Widget buildMapView() {
+    return GoogleMap(
+      markers: controller.markers,
+      mapType: MapType.normal,
+      myLocationEnabled: true,
+      myLocationButtonEnabled: true,
+      initialCameraPosition: CameraPosition(
+          target: LatLng(controller.defaultPosition!.latitude, controller.defaultPosition!.longitude), zoom: 14.476),
+      onMapCreated: (GoogleMapController googleController) {
+        controller.googleMapController.complete(googleController);
+        controller.startLocationUpdates1(googleController);
+        // controller.startLocationUpdates();
+      },
+      circles: {
+        if (controller.markers.isNotEmpty)
+           Circle(
+            circleId: CircleId('markerCircle'),
+            center: controller.markers.first.position,
+            radius: int.parse(controller.radiusText.text).toDouble(),
+            fillColor: Colors.red.withOpacity(0.5),
+            strokeColor: Colors.red,
+            strokeWidth: 1,
           ),
-        ],
+      },
+      onTap: (LatLng location) {
+        if (controller.markLocation != null) return;
+        controller.markers.clear();
+        Marker marker = Marker(
+          markerId: MarkerId(location.toString()),
+          position: location,
+        );
+        controller.updateMarkers(marker: marker, latLng: location);
+      },
+    );
+  }
+
+  Widget buildAbsentByRadius() {
+    return Positioned(
+      bottom: 2.5.h,
+      left: 5.w,
+      child: Container(
+        width: 80.w,
+        height: 5.h,
+        padding: EdgeInsets.symmetric(horizontal: 2.w),
+        decoration: BoxDecoration(
+          color: Colors.white70,
+          borderRadius: BorderRadius.circular(1.h),
+        ),
+        child: TextButton(
+          child: Text('Absent by Radius'),
+          onPressed: () {
+            // controller.checkUserInMarkLocation();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildStatusAbsent() {
+    return Positioned(
+      top: 1.6.h,
+      left: 5.w,
+      child: Container(
+        width: 80.w,
+        height: 10.h,
+        padding: EdgeInsets.symmetric(horizontal: 2.w),
+        decoration: BoxDecoration(
+          color: Colors.white70,
+          borderRadius: BorderRadius.circular(1.h),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Text('You Pinned Location'),
+            Text('latitude :${controller.markLocation?.position.latitude}'),
+            Text('longitude :${controller.markLocation?.position.longitude}'),
+            Text('Message : ${controller.message}')
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildSetUpLocation() {
+    return Positioned(
+      bottom: 7.h,
+      left: 5.w,
+      child: Container(
+        width: 80.w,
+        height: 5.h,
+        padding: EdgeInsets.symmetric(horizontal: 2.w),
+        decoration: BoxDecoration(
+          color: Colors.white70,
+          borderRadius: BorderRadius.circular(1.h),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Set Up this Location?'),
+            TextButton(
+                onPressed: () {
+                  if (controller.markers.isEmpty) {
+                    Get.snackbar('Error', 'Please set up location first', backgroundColor: Colors.red[200]);
+                  } else {
+                    Get.defaultDialog(
+                      title: 'Set Up Location',
+                      content: Column(
+                        children: [
+                          const Text('Are you sure to set up this location?'),
+                          SizedBox(height: 2.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              TextButton(
+                                onPressed: () async {
+                                  Get.back();
+                                  bool status = await controller.captureLocationMarker();
+                                  if (status) {
+                                    Get.snackbar('Success', 'Location has been set up',
+                                        backgroundColor: Colors.green[200]);
+                                  } else {
+                                    Get.snackbar('Error', 'Failed to set up location',
+                                        backgroundColor: Colors.red[200]);
+                                  }
+                                },
+                                child: Text('Yes'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Get.back();
+                                },
+                                child: Text('No'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+                child: Text('OK')),
+          ],
+        ),
       ),
     );
   }
