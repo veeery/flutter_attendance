@@ -19,7 +19,8 @@ class MapController extends GetxController {
   bool statusPermission = false;
   bool isLoading = false;
 
-  String message = '';
+  bool statusAbsent = false;
+  String message = 'Memproses...';
 
   TextEditingController radiusText = TextEditingController();
 
@@ -39,6 +40,7 @@ class MapController extends GetxController {
         print('Updated location: $position');
         defaultPosition = position;
 
+        // Calculate distance every time user location updated or moved
         if (markLocation != null) {
           checkUserInMarkLocation(
             userLocation: LatLng(position.latitude, position.longitude),
@@ -48,6 +50,15 @@ class MapController extends GetxController {
         }
       },
     );
+  }
+
+  Future<bool> absentManual() async {
+    checkUserInMarkLocation(
+      userLocation: LatLng(defaultPosition!.latitude, defaultPosition!.longitude),
+      markLocation: markLocation!.position,
+    );
+    update();
+    return statusAbsent;
   }
 
   double calculateDistance(LatLng position, LatLng markLocation) {
@@ -68,69 +79,24 @@ class MapController extends GetxController {
 
     if (distance <= int.parse(radiusText.text)) {
       message = 'User DALAM radius.';
+      statusAbsent = true;
     } else {
       message = 'User LUAR radius.';
+      statusAbsent = false;
     }
   }
 
-  void startLocationUpdates() {
-    positionStreamSubscription = Geolocator.getPositionStream(
-            locationSettings:
-                LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: int.parse(radiusText.text)))
-        .listen(
-      (Position position) {
-        print('Updated location: $position');
-        defaultPosition = position;
-
-        if (markLocation != null) {
-          double _degreeToRadian(double degree) {
-            return degree * pi / 180;
-          }
-
-          final userLatLng = LatLng(position.latitude, position.longitude);
-
-          final centerLatLng = LatLng(markLocation!.position.latitude, markLocation!.position.longitude);
-
-          final dLat = _degreeToRadian(centerLatLng.latitude - userLatLng.latitude);
-          final dLon = _degreeToRadian(centerLatLng.longitude - userLatLng.latitude);
-
-          final a = sin(dLat / 2) * sin(dLat / 2) +
-              cos(_degreeToRadian(userLatLng.latitude)) *
-                  cos(_degreeToRadian(centerLatLng.latitude)) *
-                  sin(dLon / 2) *
-                  sin(dLon / 2);
-          final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-          final distance = 6371000 * c;
-
-          // user in area
-          if (distance <= int.parse(radiusText.text)) {
-            message = 'You entered the area';
-          } else {
-            // user out of area
-            message = 'You exited the area';
-          }
-        }
-
-        print('checkUserInMarkLocation 8');
-      },
-    );
+  void stopLocationUpdates() {
+    // if (positionStreamSubscription != null) {
+    //   positionStreamSubscription!.cancel();
+    //   positionStreamSubscription = null;
+    // }
+    // if (positionStreamSubscription != null) {
+    //   positionStreamSubscription!.cancel();
+    // }
+    markLocation = null;
+    update();
   }
-
-  // void stopLocationUpdates() {
-  //   if (positionStreamSubscription != null) {
-  //     positionStreamSubscription!.cancel();
-  //     positionStreamSubscription = null;
-  //   }
-  // }
-  //
-  // @override
-  // void dispose() {
-  //   if (positionStreamSubscription != null) {
-  //     positionStreamSubscription!.cancel();
-  //   }
-  //   super.dispose();
-  // }
 
   void goToLocation(LatLng latLng) async {
     final GoogleMapController controller = await googleMapController.future;
@@ -172,7 +138,6 @@ class MapController extends GetxController {
       // markers = Marker(markerId: MarkerId('list'), position: LatLng(defaultPosition!.latitude, defaultPosition!.longitude)),
       myLocation = Marker(
           markerId: MarkerId('myLocation'), position: LatLng(defaultPosition!.latitude, defaultPosition!.longitude));
-      // await getAddress();
     }
     triggeredLoading();
   }
@@ -184,14 +149,38 @@ class MapController extends GetxController {
     update();
   }
 
-  Future<bool> captureLocationMarker() async {
+  Future<bool> captureLocationMarker({bool withCurrentData = false}) async {
     triggeredLoading();
-    if (selectedPosition != null) {
-      markLocation = Marker(markerId: MarkerId('1'), position: selectedPosition!);
+
+    if (withCurrentData) {
+      markLocation =
+          Marker(markerId: MarkerId('1'), position: LatLng(defaultPosition!.latitude, defaultPosition!.longitude));
       updateMarkers(marker: markLocation!, latLng: selectedPosition!);
+
+      // calculate distance when user click the button
+      checkUserInMarkLocation(
+        userLocation: LatLng(defaultPosition!.latitude, defaultPosition!.longitude),
+        markLocation: markLocation!.position,
+      );
+
       triggeredLoading();
       return true;
+    } else {
+      if (selectedPosition != null) {
+        markLocation = Marker(markerId: MarkerId('1'), position: selectedPosition!);
+
+        // calculate distance when user click the button
+        checkUserInMarkLocation(
+          userLocation: LatLng(defaultPosition!.latitude, defaultPosition!.longitude),
+          markLocation: markLocation!.position,
+        );
+
+        updateMarkers(marker: markLocation!, latLng: selectedPosition!);
+        triggeredLoading();
+        return true;
+      }
     }
+
     triggeredLoading();
     return false;
   }
